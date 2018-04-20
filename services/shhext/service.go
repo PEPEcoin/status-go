@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rpc"
 	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
+	"github.com/status-im/status-go/services/shhext/dedup"
 )
 
 // EnvelopeState in local tracker
@@ -29,8 +30,9 @@ type EnvelopeEventsHandler interface {
 
 // Service is a service that provides some additional Whisper API.
 type Service struct {
-	w       *whisper.Whisper
-	tracker *tracker
+	w            *whisper.Whisper
+	tracker      *tracker
+	Deduplicator *dedup.Deduplicator
 }
 
 // Make sure that Service implements node.Service interface.
@@ -44,8 +46,9 @@ func New(w *whisper.Whisper, handler EnvelopeEventsHandler) *Service {
 		cache:   map[common.Hash]EnvelopeState{},
 	}
 	return &Service{
-		w:       w,
-		tracker: track,
+		w:            w,
+		tracker:      track,
+		Deduplicator: dedup.NewDeduplicator(w),
 	}
 }
 
@@ -60,7 +63,7 @@ func (s *Service) APIs() []rpc.API {
 		{
 			Namespace: "shhext",
 			Version:   "1.0",
-			Service:   NewPublicAPI(s.w, s.tracker),
+			Service:   NewPublicAPI(s.w, s.tracker, s.Deduplicator),
 			Public:    true,
 		},
 	}

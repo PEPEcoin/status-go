@@ -20,9 +20,10 @@ type Cache struct {
 func makePeerKey(peerID discv5.NodeID, topic discv5.Topic) []byte {
 	topicLen := len([]byte(topic))
 	lth := topicLen + len(peerID)
-	key := make([]byte, lth)
-	copy(key[:], topic[:])
-	copy(key[topicLen:], peerID[:])
+	key := make([]byte, lth+1)
+	key[0] = 0x01
+	copy(key[1:], topic[:])
+	copy(key[1+topicLen:], peerID[:])
 	return key
 }
 

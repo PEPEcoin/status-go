@@ -64,7 +64,7 @@ func (s *ShhExtSuite) SetupTest() {
 		s.NoError(stack.Register(func(n *node.ServiceContext) (node.Service, error) {
 			return s.whisper[i], nil
 		}))
-		s.services[i] = New(s.whisper[i], nil)
+		s.services[i] = New(s.whisper[i], nil, "")
 		s.NoError(stack.Register(func(n *node.ServiceContext) (node.Service, error) {
 			return s.services[i], nil
 		}))

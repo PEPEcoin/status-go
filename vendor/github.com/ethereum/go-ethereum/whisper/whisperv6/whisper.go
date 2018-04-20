@@ -466,6 +466,16 @@ func (whisper *Whisper) SelectKeyPair(key *ecdsa.PrivateKey) error {
 	return nil
 }
 
+func (whisper *Whisper) SelectedKeyPairID() string {
+	whisper.keyMu.RLock()
+	defer whisper.keyMu.RUnlock()
+
+	for id := range whisper.privateKeys {
+		return id
+	}
+	return ""
+}
+
 // DeleteKeyPairs removes all cryptographic identities known to the node
 func (whisper *Whisper) DeleteKeyPairs() error {
 	whisper.keyMu.Lock()

@@ -12,6 +12,9 @@ const (
 	// StatusDatabase path relative to DataDir.
 	StatusDatabase = "status-db"
 
+	// DeduplicatorDatabase path relative to DataDir.
+	DeduplicatorDatabase = "status-deduplicator-db"
+
 	// KeyStoreDir is default directory where private keys are stored, relative to DataDir
 	KeyStoreDir = "keystore"
 

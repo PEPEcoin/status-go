@@ -22,6 +22,7 @@ import (
 	"github.com/status-im/status-go/geth/params"
 	"github.com/status-im/status-go/geth/peers"
 	"github.com/status-im/status-go/geth/rpc"
+	"github.com/status-im/status-go/services/shhext"
 )
 
 // tickerResolution is the delta to check blockchain sync progress.
@@ -98,10 +99,31 @@ func (n *StatusNode) Start(config *params.NodeConfig, services ...node.ServiceCo
 		return err
 	}
 
-	if n.config.Discovery {
-		return n.startPeerPool()
+	statusDB, err := db.Create(filepath.Join(n.config.DataDir, params.StatusDatabase))
+	if err != nil {
+		return err
 	}
 
+	if err := n.setupShhExt(statusDB); err != nil {
+		return err
+	}
+
+	if n.config.Discovery {
+		return n.startPeerPool(statusDB)
+	}
+
+	return nil
+}
+
+func (n *StatusNode) setupShhExt(statusDB *leveldb.DB) error {
+	shhext, err := n.ShhExService()
+	if err != nil {
+		if err != ErrServiceUnknown {
+			return err
+		}
+		return nil
+	}
+	shhext.Deduplicator.Start(statusDB)
 	return nil
 }
 
@@ -142,11 +164,7 @@ func (n *StatusNode) setupRPCClient() (err error) {
 	return
 }
 
-func (n *StatusNode) startPeerPool() error {
-	statusDB, err := db.Create(filepath.Join(n.config.DataDir, params.StatusDatabase))
-	if err != nil {
-		return err
-	}
+func (n *StatusNode) startPeerPool(statusDB *leveldb.DB) error {
 	n.db = statusDB
 	n.register = peers.NewRegister(n.config.RegisterTopics...)
 	// TODO(dshulyak) consider adding a flag to define this behaviour
@@ -374,6 +392,18 @@ func (n *StatusNode) WhisperService() (w *whisper.Whisper, err error) {
 	defer n.mu.RUnlock()
 
 	err = n.gethService(&w)
+	if err == node.ErrServiceUnknown {
+		err = ErrServiceUnknown
+	}
+
+	return
+}
+
+func (n *StatusNode) ShhExService() (s *shhext.Service, err error) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
+	err = n.gethService(&s)
 	if err == node.ErrServiceUnknown {
 		err = ErrServiceUnknown
 	}
