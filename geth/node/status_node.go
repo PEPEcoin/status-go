@@ -22,6 +22,7 @@ import (
 	"github.com/status-im/status-go/geth/params"
 	"github.com/status-im/status-go/geth/peers"
 	"github.com/status-im/status-go/geth/rpc"
+	"github.com/status-im/status-go/timeskew"
 )
 
 // tickerResolution is the delta to check blockchain sync progress.
@@ -49,6 +50,8 @@ type StatusNode struct {
 	register *peers.Register
 	peerPool *peers.PeerPool
 	db       *leveldb.DB // used as a cache for PeerPool
+
+	timeManager *timeskew.TimeSource
 
 	log log.Logger
 }
@@ -101,7 +104,13 @@ func (n *StatusNode) Start(config *params.NodeConfig, services ...node.ServiceCo
 	if n.config.Discovery {
 		return n.startPeerPool()
 	}
-
+	n.timeManager = timeskew.NewDefaultTimeSource()
+	n.timeManager.Start()
+	w, err := n.WhisperService()
+	if err != nil {
+		return err
+	}
+	w.SetTimeSource(n.timeManager.Now)
 	return nil
 }
 
@@ -184,6 +193,7 @@ func (n *StatusNode) stop() error {
 	n.peerPool = nil
 	n.db = nil
 
+	n.timeManager.Stop() // no need to nullify it
 	if err := n.gethNode.Stop(); err != nil {
 		return err
 	}
